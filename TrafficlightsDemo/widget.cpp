@@ -1,5 +1,6 @@
 #include "widget.h"
 #include "./ui_widget.h"
+#include <QHistoryState>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
@@ -35,6 +36,7 @@ void Widget::initStateMachine()
     QState *yellowState = new QState(normalState);    // 黄灯状态
     QState *greenState = new QState(normalState);     // 绿灯状态
     normalState->setInitialState(redState);
+    QHistoryState *normalHisState = new QHistoryState(normalState); // 历史状态
 
     QState *abnormalState = new QState(m_stateMachine);   // 异常的状态组
     QState *flashYellowState = new QState(abnormalState); // 闪烁黄灯状态
@@ -53,6 +55,10 @@ void Widget::initStateMachine()
     greenState->assignProperty(ui->redBtn, "visible", false);
     greenState->assignProperty(ui->yellowBtn, "visible", false);
     greenState->assignProperty(ui->greenBtn, "visible", true);
+    // 闪烁黄灯状态下，各个按钮显示的状态
+    flashYellowState->assignProperty(ui->redBtn, "visible", false);
+    flashYellowState->assignProperty(ui->yellowBtn, "visible", true);
+    flashYellowState->assignProperty(ui->greenBtn, "visible", false);
 
     //// 初始化状态转换过程
     // 红灯在红灯计时器超时后转换为绿灯
@@ -70,13 +76,8 @@ void Widget::initStateMachine()
     // 在进入红灯状态后，要启动红灯定时器
     connect(redState, &QState::entered, [&]() { m_redTimer.start(); });
 
-    flashYellowState->assignProperty(ui->redBtn, "visible", false);
-    flashYellowState->assignProperty(ui->yellowBtn, "visible", true);
-    flashYellowState->assignProperty(ui->greenBtn, "visible", false);
-    // redState->addTransition(ui->button, &QPushButton::clicked, flashYellowState);
-    // yellowState->addTransition(ui->button, &QPushButton::clicked, flashYellowState);
-    // greenState->addTransition(ui->button, &QPushButton::clicked, flashYellowState);
     normalState->addTransition(ui->button, &QPushButton::clicked, abnormalState);
+    abnormalState->addTransition(ui->button2, &QPushButton::clicked, normalHisState);
 
     //// 初始化状态机
     // 设置状态机的初始状态
