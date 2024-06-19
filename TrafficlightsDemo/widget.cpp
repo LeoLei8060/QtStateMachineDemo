@@ -1,7 +1,7 @@
 #include "widget.h"
 #include "./ui_widget.h"
 
-Widget::Widget(QWidget* parent)
+Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
     , m_stateMachine(new QStateMachine(this))
@@ -30,20 +30,26 @@ void Widget::initTimer()
 void Widget::initStateMachine()
 {
     //// 创建状态
-    QState* redState = new QState(m_stateMachine); // 红灯状态
-    QState* yellowState = new QState(m_stateMachine); // 黄灯状态
-    QState* greenState = new QState(m_stateMachine); // 绿灯状态
+    QState *normalState = new QState(m_stateMachine); // 正常的状态组
+    QState *redState = new QState(normalState);       // 红灯状态
+    QState *yellowState = new QState(normalState);    // 黄灯状态
+    QState *greenState = new QState(normalState);     // 绿灯状态
+    normalState->setInitialState(redState);
+
+    QState *abnormalState = new QState(m_stateMachine);   // 异常的状态组
+    QState *flashYellowState = new QState(abnormalState); // 闪烁黄灯状态
+    abnormalState->setInitialState(flashYellowState);
 
     //// 初始化状态的属性
     // 红灯状态下，各个按钮显示的状态
     redState->assignProperty(ui->redBtn, "visible", true);
     redState->assignProperty(ui->yellowBtn, "visible", false);
     redState->assignProperty(ui->greenBtn, "visible", false);
-    // 红灯状态下，各个按钮显示的状态
+    // 黄灯状态下，各个按钮显示的状态
     yellowState->assignProperty(ui->redBtn, "visible", false);
     yellowState->assignProperty(ui->yellowBtn, "visible", true);
     yellowState->assignProperty(ui->greenBtn, "visible", false);
-    // 红灯状态下，各个按钮显示的状态
+    // 绿灯状态下，各个按钮显示的状态
     greenState->assignProperty(ui->redBtn, "visible", false);
     greenState->assignProperty(ui->yellowBtn, "visible", false);
     greenState->assignProperty(ui->greenBtn, "visible", true);
@@ -64,9 +70,17 @@ void Widget::initStateMachine()
     // 在进入红灯状态后，要启动红灯定时器
     connect(redState, &QState::entered, [&]() { m_redTimer.start(); });
 
+    flashYellowState->assignProperty(ui->redBtn, "visible", false);
+    flashYellowState->assignProperty(ui->yellowBtn, "visible", true);
+    flashYellowState->assignProperty(ui->greenBtn, "visible", false);
+    // redState->addTransition(ui->button, &QPushButton::clicked, flashYellowState);
+    // yellowState->addTransition(ui->button, &QPushButton::clicked, flashYellowState);
+    // greenState->addTransition(ui->button, &QPushButton::clicked, flashYellowState);
+    normalState->addTransition(ui->button, &QPushButton::clicked, abnormalState);
+
     //// 初始化状态机
     // 设置状态机的初始状态
-    m_stateMachine->setInitialState(redState);
+    m_stateMachine->setInitialState(normalState);
     // 开启状态机
     m_stateMachine->start();
 }
